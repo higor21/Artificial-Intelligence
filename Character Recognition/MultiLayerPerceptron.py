@@ -57,37 +57,53 @@ class MultiLayersPerceptron():
 		# define as matrizes de pesos entre cada 
 		#print(self.biases)
 		self.weights = arrayToList([np.random.randn(x,y) for y, x in zip(self.size_layers[:-1], self.size_layers[1:])])
+
+		self.deltaW = arrayToList([0.0*np.random.randn(x,y) for y, x in zip(self.size_layers[:-1], self.size_layers[1:])])
+		self.deltaW_A = arrayToList([0.0*np.random.randn(x,y) for y, x in zip(self.size_layers[:-1], self.size_layers[1:])])
+
 		print(self.weights)
 
 
 
 
-	def training(self, training_data, learning_rate):
+	def training(self, training_data, alfa = 0.5, learning_rate = 0.5):
 		"""
 			Método para treinamento da rede neural com base nos dados 'training_data' e na
 			taxa de aprendizado 'learning_rate'
 		"""
+
 		while(len(training_data)):
 			output_data, list_outs = self.calculate_output(training_data[-1][0])
 			error = self.calculate_error(training_data[-1][1], output_data)
-			break
-			self.back_propagation(training_data[-1][0], output_data, error, list_outs, learning_rate)
+			self.back_propagation(self.num_layers, error, len(training_data), alfa, list_outs, learning_rate)
 			training_data.pop()
 			break
+		print('\nO treinamento da rede acabou!')
 
+	def dAtivFunc(fx):
+		return fx*(1.0-fx)
 
-	def back_propagation(self, input_data, real_output, error, list_outs, learning_rate = 0.5):
-		delta = real_output*(1 - real_output)*error
-		for b, w in zip(self.biases, self.weights):
-			print(str(b) + ' <-> ' + str(w))
-			for i in range(len(w)):
-				pass
+	def back_propagation(self, n_layers, error, quatity_ex, alfa, list_outs, learning_rate):
+		delta = np.asarray([self.dAtivFunc(fx) for fx in list_outs[n_layers]])
+		delta = np.multiply(list_outs[n_layers], error)
+		delta = delta.transpose()  #Vetor coluna
+
+		#matriz numero_neuronios_list_outs x numero_entradas
+		self.deltaW[n_layers] = np.add(np.dot((learning_rate/quatity_ex), np.dot(delta, list_outs[n_layers]), np.dot(alfa, self.deltaW_A[n_layers])))
+
+		self.weights[n_layers] = np.add(self.weights[n_layers], self.deltaW[n_layers])
+
+		erro2 = np.dot(self.weights[n_layers].transpose(), delta)
+
+		if(n_layers != 0):
+			back_propagation(n_layers-1, erro2, quatity_ex, alfa, list_outs, learning_rate)
 
 	def calculate_output(self, input_data):
 		"""
 			Calcula a saída da rede neural para uma dada entrada. Além disso,
 		"""
 		list_outs = []
+		list_outs.append(input_data)
 		for b, w in zip(self.biases, self.weights):
 			# o resultado de 'np.dot(w,input_data) - b)' acaba sendo um 
 			# 'array()' q será calculado pela função 'act_funciton()'
