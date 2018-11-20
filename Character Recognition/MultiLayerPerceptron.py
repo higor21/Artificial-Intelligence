@@ -114,10 +114,12 @@ class MultiLayersPerceptron():
 			delta = np.multiply(deriv, error)
 			delta = delta.transpose()  # Vetor coluna
 
-			deltaW[n_layers-1] = np.dot((learning_rate/quatity_ex), np.dot(delta, np.asarray(list_outs[n_layers-1]).transpose()))
-			deltaW[n_layers-1] = np.add(deltaW[n_layers-1], np.dot(forgetting_rate, self.deltaW_A[n_layers-1]))
+			A = np.dot(delta, np.asarray(list_outs[n_layers-1]))
+			print(type(A))
+			self.deltaW[n_layers-1] = np.dot((learning_rate/quatity_ex), A)
+			self.deltaW[n_layers-1] = np.add(deltaW[n_layers-1], np.dot(forgetting_rate, self.deltaW_A[n_layers-1]))
 
-			nweights[n_layers-1] = np.add(deltaW, nweights[n_layers-1])
+			nweights[n_layers-1] = np.add(self.deltaW, nweights[n_layers-1])
 
 			error = np.dot(self.weights[n_layers-1].transpose(), delta)
 
@@ -130,7 +132,7 @@ class MultiLayersPerceptron():
 		list_outs = []
 		for w in self.weights:
 			# o resultado de 'np.dot(w,input_data) - b)' acaba sendo um 
-			# 'array()' q será calculado pela função 'act_funciton()'
+			# 'array()' q será calculado pela função 'act_funciton()'	
 			array_aux = input_data
 			for i in range(len(w)):
 				array_aux[i] = self.act_function(np.dot(w[i],input_data), "sigmoid")
