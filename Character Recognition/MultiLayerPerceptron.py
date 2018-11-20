@@ -6,7 +6,6 @@ from math import exp
 import cPickle
 import gzip
 
-
 def vectorize(x):
 	"""
 		cria matris 10x1 e coloca o valor 1 na posição 'x'
@@ -83,14 +82,19 @@ class MultiLayersPerceptron():
 			Método para treinamento da rede neural com base nos dados 'training_data' e na
 			taxa de aprendizado 'learning_rate'
 		"""
-
+		tam = 0
 		while(len(training_data)):
 			output_data, list_outs = self.calculate_output(training_data[-1][0])
 			error = self.calculate_error(training_data[-1][1], output_data)
 			self.back_propagation(self.num_layers - 2, error, len(training_data), alfa, list_outs, learning_rate)
 			training_data.pop()
-			break
-		print('\nO treinamento da rede acabou!')
+			tam += 1
+			if tam%200 == 0:
+				print("\niteração: " + str(tam))
+			if tam == 15000:
+				break
+			
+		print('\nO treinamento da rede acabou! > ' + str(tam))
 
 	def dAtivFunc(self,fx):
 		return fx*(1.0-fx)
@@ -146,8 +150,7 @@ tr_d, tt_d = load_data('./mnist.pkl.gz', 'rb')
 network_mlp = MultiLayersPerceptron([784,30,30,10])
 
 # Treinando a rede com o banco de imagens 'tr_d' e a uma taxa de aprendizado de 0.3
-network_mlp.training(tr_d, 0.3)
-
+network_mlp.training(tr_d,0.8, 0.1)
 
 # Testando a rede
-print('\n\nRede treinada com ' + str(test_network(tt_d, network_mlp))) + '% de presisão!\n'
+print('\n\nRede treinada com ' + str(test_network(tt_d[:500], network_mlp))) + '% de precisão!\n'
