@@ -91,6 +91,7 @@ class MultiLayersPerceptron():
 			tam += 1
 			if tam%200 == 0:
 				print("\niteração: " + str(tam))
+				print(error)
 			if tam == 15000:
 				break
 			
@@ -99,33 +100,43 @@ class MultiLayersPerceptron():
 	def dAtivFunc(self,fx):
 		return fx*(1.0-fx)
 
-	def back_propagation(self, n_layers, error, quatity_ex, alfa, list_outs, learning_rate):
-		delta = np.asarray([self.dAtivFunc(fx[0]) for fx in list_outs[n_layers]])
-		delta = np.multiply(list_outs[n_layers], error)
-		delta = delta.transpose()  #Vetor coluna
+	def back_propagation(self, n_layers, error, quatity_ex, forgetting_rate, list_outs, learning_rate):
 
-		A = np.dot(delta, list_outs[n_layers])
-		B = np.dot(alfa, self.deltaW_A[n_layers])
-		#matriz numero_neuronios_list_outs x numero_entradas
-		self.deltaW[n_layers] = np.add(np.dot((learning_rate/quatity_ex), A ), B)
+		deltaW = np.zeros([])
 
-		self.weights[n_layers] = np.add(self.weights[n_layers], self.deltaW[n_layers])
+		#Novos pesos - Copia tamanho de weights
+		nweights = self.weights
 
-		erro2 = np.dot(self.weights[n_layers].transpose(), delta.transpose())
-		if(n_layers != 0):
-			self.back_propagation(n_layers - 1, erro2, quatity_ex, alfa, list_outs, learning_rate)
+		while n_layers >= 1:
+			#Gera vetor coluna com derivada da saída da camada
+			deriv = np.asarray([self.dAtivFunc(fx[0]) for fx in list_outs[n_layers]])
+
+			delta = np.multiply(deriv, error)
+			delta = delta.transpose()  # Vetor coluna
+
+			deltaW[n_layers-1] = np.dot((learning_rate/quatity_ex), np.dot(delta, np.asarray(list_outs[n_layers-1]).transpose()))
+			deltaW[n_layers-1] = np.add(deltaW[n_layers-1], np.dot(forgetting_rate, self.deltaW_A[n_layers-1]))
+
+			nweights[n_layers-1] = np.add(deltaW, nweights[n_layers-1])
+
+			error = np.dot(self.weights[n_layers-1].transpose(), delta)
+
+			n_layers -=1
 
 	def calculate_output(self, input_data):
 		"""
 			Calcula a saída da rede neural para uma dada entrada. Além disso,
 		"""
 		list_outs = []
-		for b, w in zip(self.biases, self.weights):
+		for w in self.weights:
 			# o resultado de 'np.dot(w,input_data) - b)' acaba sendo um 
 			# 'array()' q será calculado pela função 'act_funciton()'
+			array_aux = input_data
 			for i in range(len(w)):
-				input_data[i] = self.act_function(np.dot(w[i],input_data) - b[i], "sigmoid")        
-			input_data = input_data[:i+1]
+				array_aux[i] = self.act_function(np.dot(w[i],input_data), "sigmoid")
+			input_data = array_aux[:i+1]
+			input_data[i] = 1
+			#print(str(len(input_data)) + ' - ')
 			list_outs.append(input_data)
 
 		return (input_data, arrayToList(list_outs))
@@ -147,10 +158,10 @@ tr_d, tt_d = load_data('./mnist.pkl.gz', 'rb')
 
 # Criando uma rede cuja a entrada será uma imagem de 28x28 = 784 pixels
 # e a saída será um vetor de 10 posições 
-network_mlp = MultiLayersPerceptron([784,30,30,10])
+network_mlp = MultiLayersPerceptron([784,45,10,10])
 
 # Treinando a rede com o banco de imagens 'tr_d' e a uma taxa de aprendizado de 0.3
-network_mlp.training(tr_d,0.8, 0.1)
+network_mlp.training(tr_d,0.8, 0.2)
 
 # Testando a rede
 print('\n\nRede treinada com ' + str(test_network(tt_d[:500], network_mlp))) + '% de precisão!\n'
