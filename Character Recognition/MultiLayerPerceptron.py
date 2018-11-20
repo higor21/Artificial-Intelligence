@@ -21,14 +21,18 @@ def load_data(path, cmd):
 		imagens que serão utilizados para o treinamento da rede neural
 	"""
 	file = gzip.open(path, cmd)
-	data = cPickle.load(file)[0]
+	data_input, trash, test_data = cPickle.load(file)	 
 	file.close()
 
-	training_inputs = [np.reshape(x, (784, 1)) for x in data[0]]
-	training_results = [vectorize(y) for y in data[1]]
-	training_data = zip(training_inputs, training_results)
-	return training_data
+	test_inputs = [np.reshape(x, (784, 1)) for x in test_data[0]]
+	test_results = [vectorize(y) for y in test_data[1]]
+	test_data = zip(test_inputs, test_results)	
 
+	training_inputs = [np.reshape(x, (784, 1)) for x in data_input[0]]
+	training_results = [vectorize(y) for y in data_input[1]]
+	training_data = zip(training_inputs, training_results)
+
+	return (training_data, test_data)
 
 def arrayToList(vect):
 	"""
@@ -40,6 +44,19 @@ def arrayToList(vect):
 		if type(vect[i]).__module__ == np.__name__:
 			vect[i] = vect[i].tolist()
 	return vect
+
+def vects_equal(vect1, vect2):
+	return vect2[vect1.index(max(vect1))] == [1]
+
+def test_network(datas, network):
+	"""
+		Função utilizada para testar a rede neural
+	"""
+	cont, lenght = 0, len(datas)
+	while len(datas):
+		if vects_equal(network.calculate_output(datas[-1][0])[0].tolist() , datas[-1][1]): cont += 1
+		datas.pop()
+	return (cont*100.0)/lenght
 
 class MultiLayersPerceptron():
 	def __init__(self, layers, thresholds = True):
@@ -60,11 +77,6 @@ class MultiLayersPerceptron():
 
 		self.deltaW = arrayToList([0.0*np.random.randn(x,y) for y, x in zip(self.size_layers[:-1], self.size_layers[1:])])
 		self.deltaW_A = arrayToList([0.0*np.random.randn(x,y) for y, x in zip(self.size_layers[:-1], self.size_layers[1:])])
-
-		#print(self.weights)
-
-
-
 
 	def training(self, training_data, alfa = 0.5, learning_rate = 0.5):
 		"""
@@ -95,17 +107,15 @@ class MultiLayersPerceptron():
 
 		self.weights[n_layers] = np.add(self.weights[n_layers], self.deltaW[n_layers])
 
-		print(str(n_layers) + ' ---\n')
 		erro2 = np.dot(self.weights[n_layers].transpose(), delta.transpose())
 		if(n_layers != 0):
-			self.back_propagation(n_layers, erro2, quatity_ex, alfa, list_outs, learning_rate)
+			self.back_propagation(n_layers - 1, erro2, quatity_ex, alfa, list_outs, learning_rate)
 
 	def calculate_output(self, input_data):
 		"""
 			Calcula a saída da rede neural para uma dada entrada. Além disso,
 		"""
 		list_outs = []
-		#list_outs.append(input_data)
 		for b, w in zip(self.biases, self.weights):
 			# o resultado de 'np.dot(w,input_data) - b)' acaba sendo um 
 			# 'array()' q será calculado pela função 'act_funciton()'
@@ -113,6 +123,7 @@ class MultiLayersPerceptron():
 				input_data[i] = self.act_function(np.dot(w[i],input_data) - b[i], "sigmoid")        
 			input_data = input_data[:i+1]
 			list_outs.append(input_data)
+
 		return (input_data, arrayToList(list_outs))
 
 	def calculate_error(self, expected_output, real_output):
@@ -127,7 +138,8 @@ class MultiLayersPerceptron():
 
 
 # 'tr_d' são todas as imagens que serão usadas para treinar a rede
-tr_d = load_data('./mnist.pkl.gz', 'rb')
+# 'tt_d' são todas as imagens que serão usadas para verificar a eficiencia da rede
+tr_d, tt_d = load_data('./mnist.pkl.gz', 'rb')
 
 # Criando uma rede cuja a entrada será uma imagem de 28x28 = 784 pixels
 # e a saída será um vetor de 10 posições 
@@ -135,3 +147,7 @@ network_mlp = MultiLayersPerceptron([784,30,30,10])
 
 # Treinando a rede com o banco de imagens 'tr_d' e a uma taxa de aprendizado de 0.3
 network_mlp.training(tr_d, 0.3)
+
+
+# Testando a rede
+print('\n\nRede treinada com ' + str(test_network(tt_d, network_mlp))) + '% de presisão!\n'
